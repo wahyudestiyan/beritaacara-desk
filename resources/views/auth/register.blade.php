@@ -20,7 +20,7 @@
       <div class="card-body p-0">
         <!-- Nested Row within Card Body -->
         <div class="row">
-          <div class="col-lg-5 d-none d-lg-block bg-register-image"></div>
+          {{-- <div class="col-lg-5 d-none d-lg-block bg-register-image"><img src="\admin_assets\img\at-work.svg"></div> --}}
           <div class="col-lg-7">
             <div class="p-5">
               <div class="text-center">
@@ -44,7 +44,7 @@
                   <select name="instansi" id="nama_instansi" class="form-control @error('nama_instansi')is-invalid @enderror" >
                     <option value="">-Pilih Instansi-</option>
                     <?php
-                            $con =mysqli_connect("localhost","root","","ba");
+                            $con =mysqli_connect("localhost","root","","badesk");
                             $sql_instansis=mysqli_query($con,"SELECT*From instansis order by nama_instansi asc") or die
                             (mysqli_eror($con));
                             while ($instansis=mysqli_fetch_array($sql_instansis)) {
@@ -61,7 +61,7 @@
                   <select name="role" id="nama_role" class="form-control @error('role')is-invalid @enderror">
                     <option value="">-Pilih Role-</option>
                     <?php
-                    $con =mysqli_connect("localhost","root","","ba");
+                    $con =mysqli_connect("localhost","root","","badesk");
                     $sql_roles=mysqli_query($con,"SELECT*From roles order by role asc") or die
                     (mysqli_eror($con));
                     while ($roles=mysqli_fetch_array($sql_roles)) {

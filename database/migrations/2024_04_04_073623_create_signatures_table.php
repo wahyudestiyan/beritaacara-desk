@@ -13,7 +13,13 @@ return new class extends Migration
     {
         Schema::create('signatures', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('users_id');
+            $table->foreign('users_id')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('bas_id');
+            $table->foreign('bas_id')->references('id')->on('bas')->onDelete('cascade');
             $table->string('name');
+            $table->string('nip');
+            $table->string('hp');
             $table->string('signature');
             $table->timestamps();
         });

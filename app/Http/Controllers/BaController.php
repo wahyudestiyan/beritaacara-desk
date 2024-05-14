@@ -9,7 +9,13 @@ use App\Models\juldabelum;
 use App\Models\instansi;
 use App\Models\Signature;
 use App\Models\SignatureProdusen;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Livewire\WithPagination;
+use Livewire\Component;
+use Carbon\Carbon;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 class BaController extends Controller
 {
@@ -18,16 +24,38 @@ class BaController extends Controller
      */
     public function index(Request $request)
     {
+        
+        
+        // $bas = DB::table('bas')->get();
         $bas=Ba::orderBy('created_at', 'DESC')->get();
         $keyword=$request->keyword;
-        $bas=Ba::where('instansi', 'LIKE', '%'.$keyword.'%')
-        ->orWhere('tahun', 'LIKE', '%'.$keyword.'%')
-        ->paginate(15); 
-    
-        
-        return view('ba.index', ['bas' => $bas]);
+        $bas = Ba::orderBy('created_at', 'DESC')
+              ->where('instansi', 'LIKE', '%'.$keyword.'%')
+              ->orWhere('tahun', 'LIKE', '%'.$keyword.'%')
+              ->orWhere('jenis_ba', 'LIKE', '%'.$keyword.'%')
+              ->paginate(10);
+
+        return view('ba.index', compact('bas', 'keyword'));
     }
-  
+    public function cetak(string $id)
+    {
+        // Menggunakan findOrFail untuk menangani jika ID tidak ditemukan
+        $bas = Ba::findOrFail($id);
+        
+        $juldas = Julda::where('bas_id', $id)->get();
+        $juldabelums = Juldabelum::where('bas_id', $id)->get();  
+    
+        $signatures = auth()->user()->id;
+
+        $signatureprodusens = SignatureProdusen::where('bas_id', $id)->first();
+
+        $signatures = Signature::where('bas_id', $id)->first();
+
+        $minggudepan = Carbon::parse($bas->created_at)->addWeek();
+       
+        return view ('ba.cetak', compact('bas', 'juldas', 'juldabelums', 'signatures', 'minggudepan','signatureprodusens'));
+    }
+    
 
     /**
      * Show the form for creating a new resource.
@@ -41,50 +69,66 @@ class BaController extends Controller
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
-    {
-        //Product::create($request->all());
-       // return redirect()->route('products')->with('success', 'Product added successfully');
+{
+    $validatedData = $request->validate([
+        'jenis_ba' => 'required',
+        'instansi' => 'required',
+        'tanggal_ba' => 'required|date',
+        'tahun' => 'required|integer',
+        'judul.*' => 'nullable', // Ubah menjadi opsional
+        'julket.*' => 'nullable', // Ubah menjadi opsional
+        'juduldata.*' => 'nullable',
+        'julketbelum.*' => 'nullable',
+    ]);
 
-        $validatedData = $request->all();
-        //dd($request->all());
-        $bas= new Ba;
-        $bas->instansi=$validatedData['instansi'];
-        $bas->tanggal_ba=$validatedData['tanggal_ba'];
-        $bas->tahun=$validatedData['tahun'];
-        $bas->save();
-            
-        foreach ($request->judul as $key=>$judul) {
-            $juldas=new julda;
-            $juldas->judul_data=$request->judul[$key];
-            $juldas->julket=$request->julket[$key];
-            $juldas->bas_id=$bas->id;
-            $juldas->created_at=$bas->created_at;
-            $juldas->updated_at=$bas->updated_at;
-            $juldas->save();  
-             
-            foreach ($request->juduldata as $key=>$juduldata) {
-                $juldabelums=new juldabelum;
-                $juldabelums->bas_id=$bas->id;
-                $juldabelums->created_at=$bas->created_at;
-                $juldabelums->updated_at=$bas->updated_at;
-                $juldabelums->juduldata_belum=$request->juduldata[$key];
-                $juldabelums->julket_belum=$request->julketbelum[$key];
-                $juldabelums->save(); 
-            };
-                };
-    return redirect()->route('ba')->with('success','BA berhasil ditambahkan!'); 
+    $bas = new Ba;
+    $bas->jenis_ba = $validatedData['jenis_ba'];
+    $bas->instansi = $validatedData['instansi'];
+    $bas->tanggal_ba = Carbon::parse($validatedData['tanggal_ba']);
+    $bas->tahun = $validatedData['tahun'];
+    $bas->save();
+
+    // Periksa apakah bidang 'judul' ada sebelum mengaksesnya
+    if ($request->has('judul') && $request->has('julket')) {
+        foreach ($validatedData['judul'] as $key => $judul) {
+            if (!empty($judul)) {
+                $juldas = new julda;
+                $juldas->judul_data = $judul;
+                $juldas->julket = $validatedData['julket'][$key];
+                $juldas->bas_id = $bas->id;
+                $juldas->save();  
+            }
+        }
     }
-  
+
+    // Periksa apakah bidang 'juduldata' ada sebelum mengaksesnya
+    if ($request->has('juduldata') && $request->has('julketbelum')) {
+        foreach ($validatedData['juduldata'] as $key => $juduldata) {
+            if (!empty($juduldata)) {
+                $juldabelums = new juldabelum;
+                $juldabelums->bas_id = $bas->id;
+                $juldabelums->juduldata_belum = $juduldata;
+                $juldabelums->julket_belum = $validatedData['julketbelum'][$key];
+                $juldabelums->save(); 
+            }
+        }
+    }
+    
+    return redirect()->route('ba')->with('success', 'BA berhasil ditambahkan!');
+}  
     /**
      * Display the specified resource.
      */
     public function show(string $id)
-    {
-        $bas=Ba::findOrfail($id);
-        // return view ('ba.show', compact('bas'));
-        $juldas = julda::where('bas_id', $id)->get();
-        return view ('ba.show', compact('juldas','bas'));
-    }
+{
+    $bas = Ba::findOrFail($id);
+    $juldas = Julda::where('bas_id', $id)->get();
+    $juldabelums = Juldabelum::where('bas_id', $id)->get();  
+    $minggudepan = Carbon::parse($bas->created_at)->addWeek();
+
+    return view('ba.show', compact('bas', 'juldas', 'juldabelums', 'minggudepan'));
+}
+
 
   
     /**
@@ -92,19 +136,59 @@ class BaController extends Controller
      */
     public function edit(string $id)
     {
-        $bas=Ba::findOrfail($id);
-        return view ('ba.edit', compact('bas'));
+        $bas = Ba::findOrFail($id);
+        return view('ba.edit', compact('bas'));
     }
   
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
-    {
-        $bas=Ba::findOrfail($id);
-        $bas->update($request->all());
-        return redirect()->route('ba')->with('success','BA berhasil diedit!');
+    public function update(Request $request, $id)
+{
+    $validatedData = $request->validate([
+        'jenis_ba' => 'required',
+        'instansi' => 'required',
+        'tanggal_ba' => 'required|date',
+        'tahun' => 'required',
+        'judul' => 'array',
+        'julket' => 'array',
+        'juduldata' => 'array',
+        'julketbelum' => 'array',
+    ]);
+
+    $bas = Ba::findOrFail($id);
+    $bas->jenis_ba = $validatedData['jenis_ba'];
+    $bas->instansi = $validatedData['instansi'];
+    $bas->tanggal_ba = $validatedData['tanggal_ba'];
+    $bas->tahun = $validatedData['tahun'];
+
+    $bas->julda()->delete(); // hapus data sdh diinput
+
+    if (!empty($validatedData['judul'])) {
+        foreach ($validatedData['judul'] as $index => $judul) {
+            $bas->julda()->create([
+                'judul_data' => $judul,
+                'julket' => $validatedData['julket'][$index] ?? null,
+            ]);
+        }
     }
+
+    $bas->juldabelum()->delete(); // hapus data sdh diinput
+
+    if (!empty($validatedData['juduldata'])) {
+        foreach ($validatedData['juduldata'] as $index => $juduldata) {
+            $bas->juldabelum()->create([
+                'juduldata_belum' => $juduldata,
+                'julket_belum' => $validatedData['julketbelum'][$index] ?? null,
+            ]);
+        }
+    }
+
+    $bas->save();
+
+    return redirect()->route('ba')->with('success', 'Berita Acara updated successfully.');
+}
+
   
     /**
      * Remove the specified resource from storage.
@@ -118,49 +202,99 @@ class BaController extends Controller
 
     public function tandatangan()
     {
+       
         $signatures=Signature::orderBy('created_at', 'DESC')->get();
+        // $users=user::where('nip')->get();
         return view('ba.signature', compact('signatures'));
     }
     public function tandatanganprodusen()
     {
+        
         $signature_produsens=SignatureProdusen::orderBy('created_at', 'DESC')->get();
         return view('ba.signatureprodusen', compact('signature_produsens'));
     }
+    
     public function save(Request $request)
+{
+    // Validasi data yang diterima dari formulir
+    $validatedData = $request->validate([
+        'name' => 'required',
+        'nip' => 'required',
+        'hp' => 'required',
+        'ba_id' => 'required', // Validasi ID BA
+        'signed' => 'required', // Perbaikan: sesuaikan dengan nama bidang yang digunakan di formulir
+    ]);
+
+    // Cari pengguna berdasarkan ID yang sedang masuk
+    $users = User::findOrFail(auth()->id());
+
+    $ba_id = $validatedData['ba_id'];
+    // Temukan BA berdasarkan ID
+    $bas = Ba::findOrFail($ba_id);
+    // Simpan tanda tangan ke direktori penyimpanan
+    $folderPath = storage_path('app/public/signatures');
+    $image_parts = explode(";base64,", $validatedData['signed']);
+    $image_type_aux = explode("image/", $image_parts[0]);
+    $image_type = $image_type_aux[1];
+    $image_base64 = base64_decode($image_parts[1]);
+    $fileName = uniqid() . '.' . $image_type;
+    $file = $folderPath . '/' . $fileName;
+    file_put_contents($file, $image_base64);
+
+    // Simpan data tanda tangan ke dalam database
+    $signatures = new Signature();
+    $signatures->users_id = $users->id; 
+    $signatures->bas_id = $bas->id; 
+    $signatures->name = $validatedData['name'];
+    $signatures->nip = $validatedData['nip'];
+    $signatures->hp = $validatedData['hp'];
+    $signatures->signature = $fileName;
+    $signatures->save();
+
+    // Kembalikan respons sukses
+    return back()->with('success', 'Tanda tangan berhasil disimpan.');
+}
+
+public function saveprod(Request $request)
+{
+    $validatedData = $request->validate([
+        'nameprodusen' => 'required',
+        'nipprodusen' => 'required',
+        'hpprodusen' => 'required',
+        'signatureprod' => 'required',
+        'ba_id' => 'required', // Validasi ID BA
+    ]);
+    
+    $ba_id = $validatedData['ba_id'];
+    
+    // Temukan BA berdasarkan ID
+    $bas = Ba::findOrFail($ba_id);
+    
+    // Simpan tanda tangan ke direktori penyimpanan
+    $folderPath = storage_path('app/public/signatureprodusens');
+    $image_parts = explode(";base64,", $validatedData['signatureprod']);
+    $image_type_aux = explode("image/", $image_parts[0]);
+    $image_type = $image_type_aux[1];
+    $image_base64 = base64_decode($image_parts[1]);
+    $fileName = uniqid() . '.' . $image_type;
+    $file = $folderPath . '/' . $fileName;
+    file_put_contents($file, $image_base64);
+ 
+    // Simpan data tanda tangan ke dalam database
+    $signatureprodusens = new SignatureProdusen();
+    $signatureprodusens->bas_id = $bas->id; 
+    $signatureprodusens->nameprodusen = $validatedData['nameprodusen'];
+    $signatureprodusens->nipprodusen = $validatedData['nipprodusen'];
+    $signatureprodusens->hpprodusen = $validatedData['hpprodusen'];
+    $signatureprodusens->signatureprod = $fileName;
+    $signatureprodusens->save();
+
+    // Tanggapan sukses
+    return back()->with('success', 'Tanda tangan berhasil disimpan.');
+}
+
+        public function getCreatedAtAttributes()
     {
-        $folderPath = storage_path('app/public/signatures'); // create signatures folder in public directory
-        $image_parts = explode(";base64,", $request->signed);
-        $image_type_aux = explode("image/", $image_parts[0]);
-        $image_type = $image_type_aux[1];
-        $image_base64 = base64_decode($image_parts[1]);
-        $file = $folderPath . uniqid() . '.' . $image_type;
-        file_put_contents($file, $image_base64);
-
-        // Save in your data in database here.
-        Signature::create([
-         'name' => $request->name,
-         'signature' => uniqid() . '.' . $image_type
-        ]);
-
-        return back()->with('success', 'Berhasil Tanda Tangan');
+        return \Carbon\Carbon::parse($bas->tanggal_ba)->translatedFormat('l, d F Y');
     }
-
-    public function saveprod(Request $request)
-    {
-        $folderPath = storage_path('app/public/signatureprodusens'); // create signatures folder in public directory
-        $image_parts = explode(";base64,", $request->signed);
-        $image_type_aux = explode("image/", $image_parts[0]);
-        $image_type = $image_type_aux[1];
-        $image_base64 = base64_decode($image_parts[1]);
-        $file = $folderPath . uniqid() . '.' . $image_type;
-        file_put_contents($file, $image_base64);
-
-        SignatureProdusen::create([
-            'nameprodusen' => $request->nameprodusen,
-            'signatureprod' => uniqid() . '.' . $image_type
-           ]);
-
-        return back()->with('success', 'Berhasil Tanda Tangan');
-        }
-
 }

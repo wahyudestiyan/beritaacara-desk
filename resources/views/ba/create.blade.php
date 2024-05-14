@@ -8,8 +8,31 @@
         <hr/>
         <form action="{{route('ba.store')}}" method="POST">
         @csrf
-        <table class="table table-bordered">
-    <tr>
+
+<table class="table table-bordered">
+<tr>
+        <th>Perihal Berita Acara</th>
+</tr>
+<tr>
+<td>
+<select name="jenis_ba" id="jenisba" class="form-control" required>
+<option value="">-Pilih Perihal BA-</option>
+<?php
+            $con =mysqli_connect("localhost","root","","badesk");
+            $result=mysqli_query($con,"SELECT*From jenisbas order by jenisba asc") or die
+            (mysqli_eror($con));
+            while ($sql_jenisbas=mysqli_fetch_array($result)) {
+                echo '<option value="'.$sql_jenisbas['jenisba'].'">',
+                            $sql_jenisbas['jenisba'].'</option>';
+                    
+            }?>
+            </select>
+        </td>
+</tr>
+</table>
+
+<table class="table table-bordered">
+<tr>
         <th>Instansi</th>
 </tr>
 <tr>
@@ -17,7 +40,7 @@
 <select name="instansi" id="nama_instansi" class="form-control" required>
 <option value="">-Pilih Instansi-</option>
 <?php
-            $con =mysqli_connect("localhost","root","","ba-desk");
+            $con =mysqli_connect("localhost","root","","badesk");
             $sql_instansis=mysqli_query($con,"SELECT*From instansis order by nama_instansi asc") or die
             (mysqli_eror($con));
             while ($instansis=mysqli_fetch_array($sql_instansis)) {
@@ -45,27 +68,19 @@
 <td>
 <input type="text" name="tahun" class="form-control" placeholder="Tahun Data">
 </td>
-<table class="table table-bordered" id="tmbhjudul">
+<table class="table table-bordered" id="tmbhjuduldata">
     <tr>
-        <th width="600">Judul Data</th>
-        <th width="110">Tahun Data</th>
-        <th width="10">Action</th>
-</tr>
-<tr>
-<td><input type="text" name="judul[]" placeholder="Isikan Judul Data" class="form-control"></td>
-<td><input type="text" name="julket[]" placeholder="Tahun" class="form-control"></td>
-<td><button id="addjudul" type="button" name="add" class="btn btn-primary">+</button></td>
+        <th width="590">Judul Data yang sudah dipenuhi</th>
+        <th width="110"></th>
+        <th width="70"><button id="addjuduldata" type="button" name="add" class="btn btn-primary">+</button></th>
 </tr>
 </table>
 <table class="table table-bordered" id="tmbhjudulbelum">
     <tr>
-        <th width="590">Tindak Lanjut Kesepakatan Jika Ada</th>
+        <th width="590">Tindak Lanjut Kesepakatan Pemenuhan Data Jika Ada</th>
         <th width="110"></th>
         <th width="70"><button id="addjudulbelum" type="button" name="addbelum" class="btn btn-warning">+</button></th>
 </tr>
-
-</table>
-<table class="table table-bordered" id="tmbhjudulbelum">
 </table>
             <td>
             <input type="submit" class="btn btn-success " value="Submit">
@@ -73,18 +88,17 @@
             </td>
 
 </form>
-
-<script> 
-   var i= 0;
-        $("#addjudul").click(function(){
+<script>
+    var i= 0;
+        $("#addjuduldata").click(function(){
             ++i;
-            $("#tmbhjudul").append(
-                `<tr>
-                <td width="590">
+            $("#tmbhjuduldata").append(
+            `<tr>
+                <td width="600">
                 <input type="text" name="judul[]" placeholder="Isikan Judul Data" class="form-control"></td>
-                <td width="100">
+                <td width="110">
                 <input type="text" name="julket[]" placeholder="Tahun" class="form-control"></td>
-                <td width="70">
+                <td width="10">
                 <button type="button" class="btn btn-danger remove-table-row">-</button></td>
             </tr>`
             );
@@ -93,7 +107,7 @@
                 $(this).parents('tr').remove();
             })
         });
-</script> 
+    </script>
 <script>
     var i= 0;
         $("#addjudulbelum").click(function(){

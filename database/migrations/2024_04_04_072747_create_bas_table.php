@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('bas', function (Blueprint $table) {
             $table->id();
+            $table->text('jenis_ba');
             $table->text('instansi');
             $table->date('tanggal_ba');
             $table->string('tahun');

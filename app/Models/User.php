@@ -25,6 +25,11 @@ class User extends Authenticatable
         'password',
     ];
 
+    public function signatures()
+    {
+        return $this->hasMany(Signature::class);
+    }
+
     /**
      * The attributes that should be hidden for serialization.
      *

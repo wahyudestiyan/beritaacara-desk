@@ -13,7 +13,11 @@ return new class extends Migration
     {
         Schema::create('signatureprodusens', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('bas_id');
+            $table->foreign('bas_id')->references('id')->on('bas')->onDelete('cascade');
             $table->string('nameprodusen');
+            $table->string('nipprodusen');
+            $table->string('hpprodusen');
             $table->string('signatureprod');
             $table->timestamps();
         });
@@ -24,6 +28,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('signatureprodusens');
+        Schema::table('signatureprodusens', function (Blueprint $table) {
+            Schema::dropIfExists('signatureprodusens');
+        });
     }
 };
