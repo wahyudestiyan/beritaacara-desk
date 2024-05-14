@@ -1,0 +1,34 @@
+version: "3.9"
+services:
+    laravel:
+        image: "bitnami/laravel:11.0.7"
+        volumes:
+            - ".:/app"
+        networks:
+            laravel-network: {}
+        environment:
+            - DB_DATABASE=apps_docker
+            - DB_USERNAME=root
+            - DB_PORT=3306
+            - DB_HOST=mariadb
+        ports:
+            - "8000:8000"
+        container_name: laravel-ba
+    mariadb:
+        image: mariadb:10.3
+        container_name: ba_mariadb
+        volumes:
+            - apps_persistent:/var/lib/mysql
+        ports:
+            - 19026:3306
+        restart: always
+        environment:
+            - TZ=Asia/Jakarta
+            # - MYSQL_USER=apps_data
+            # - MYSQL_PASSWORD=pass_apps_data
+            - MYSQL_ROOT_PASSWORD=admin_db
+            - MYSQL_DATABASE=apps_docker
+networks:
+    laravel-network: {}
+volumes:
+    apps_persistent:
